@@ -31,56 +31,43 @@ const GLOBAL_CSS = `
     --tm:        #94A3B8;
     --ff:        'Inter', system-ui, sans-serif;
     --mono:      'JetBrains Mono', monospace;
-    --r:         8px;
-    --r2:        12px;
     --shadow:    0 1px 3px rgba(0,0,0,.07), 0 4px 12px rgba(0,0,0,.05);
     --shadow-hv: 0 4px 16px rgba(0,0,0,.12);
   }
 
   html, body, #root { height: 100%; font-family: var(--ff); background: var(--bg); color: var(--t1); font-size: 13px; }
 
-  /* Screen transition */
   .screen-enter  { animation: fadeSlide .22s ease both; }
   @keyframes fadeSlide { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
 
-  /* Bar fill animation */
   .bar-animate { animation: barGrow .6s cubic-bezier(.4,0,.2,1) both; }
   @keyframes barGrow { from { width:0 !important; } }
 
-  /* Gauge ring animation */
   .ring-animate { animation: ringDraw .8s cubic-bezier(.4,0,.2,1) both; }
   @keyframes ringDraw { from { stroke-dashoffset: 119.4 !important; } }
 
-  /* Flag resolve animation */
   .flag-resolve { animation: flagOut .3s ease forwards; }
   @keyframes flagOut { to { opacity:0; max-height:0; padding:0; margin:0; overflow:hidden; } }
 
-  /* Card hover */
+  .panel-open { animation: panelDown .25s ease both; overflow:hidden; }
+  @keyframes panelDown { from { opacity:0; max-height:0; } to { opacity:1; max-height:400px; } }
+
   .card-hover { transition: box-shadow .18s, transform .18s; cursor:default; }
   .card-hover:hover { box-shadow: var(--shadow-hv); transform: translateY(-1px); }
 
-  /* Scrollbar */
   ::-webkit-scrollbar { width:5px; height:5px; }
   ::-webkit-scrollbar-track { background:transparent; }
   ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:8px; }
 
-  /* Skill toggle */
-  .stgl { transition: all .15s; }
-  .stgl:hover { filter: brightness(.95); }
-
-  /* Tab active underline slide */
   .tab-item { position:relative; transition: color .15s; }
   .tab-item::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:var(--teal); transform:scaleX(0); transition:transform .2s; border-radius:2px 2px 0 0; }
   .tab-item.active::after { transform:scaleX(1); }
 
-  /* Pulse on urgent badge */
   .pulse { animation: pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
 
-  /* Button press */
   button:active { transform: scale(.97); }
 
-  /* Contenteditable caret */
   [contenteditable]:focus { outline: 2px solid var(--teal); border-radius:6px; }
 `;
 
@@ -122,10 +109,10 @@ function Badge({ type="gray", children, pulse=false }) {
   );
 }
 
-function Btn({ variant="ghost", size="md", onClick, children, style:sx={} }) {
+function Btn({ variant="ghost", size="md", onClick, children, style:sx={}, disabled=false }) {
   const base = { display:"inline-flex", alignItems:"center", gap:5, borderRadius:6,
-    fontFamily:"inherit", fontWeight:600, cursor:"pointer", border:"none",
-    transition:"all .15s", whiteSpace:"nowrap", ...sx };
+    fontFamily:"inherit", fontWeight:600, cursor:disabled?"not-allowed":"pointer", border:"none",
+    transition:"all .15s", whiteSpace:"nowrap", opacity:disabled?.55:1, ...sx };
   const sz = size==="sm" ? { padding:"5px 12px", fontSize:11 } : { padding:"8px 16px", fontSize:12 };
   const vars = {
     navy:  { background:C.navy, color:"#fff" },
@@ -134,7 +121,7 @@ function Btn({ variant="ghost", size="md", onClick, children, style:sx={} }) {
     ghost: { background:"transparent", color:C.t2, border:`1px solid ${C.border2}` },
     danger:{ background:C.redBg, color:C.red, border:`1px solid #FCA5A5` },
   };
-  return <button onClick={onClick} style={{...base,...sz,...(vars[variant]||vars.ghost)}}>{children}</button>;
+  return <button disabled={disabled} onClick={disabled?undefined:onClick} style={{...base,...sz,...(vars[variant]||vars.ghost)}}>{children}</button>;
 }
 
 function Card({ children, style:sx={}, className="" }) {
@@ -188,57 +175,61 @@ const EV_DATA = [
   { domain:"Handoff Documentation (PCR)",    level:"none",    pct:0  },
 ];
 
-function EvidenceGauge({ animate }) {
+function EvidenceGauge({ animate, simple=false }) {
   const colors = { strong:C.green, partial:C.amber, none:"transparent" };
   const labels = { strong:"Strong", partial:"Partial", none:"Not captured" };
   const textColors = { strong:C.green, partial:C.amber, none:C.red };
   return (
     <div>
-      <div style={{ fontSize:11, color:C.t2, marginBottom:12, lineHeight:1.6 }}>
-        AI mapped this encounter to competency domains below. <strong>Strong</strong> = fully documented. <strong>Partial</strong> = incomplete. <strong>None</strong> = not captured.
-      </div>
+      {!simple && (
+        <div style={{ fontSize:11, color:C.t2, marginBottom:12, lineHeight:1.6 }}>
+          AI mapped this encounter to competency domains below. <strong>Strong</strong> = fully documented. <strong>Partial</strong> = incomplete. <strong>None</strong> = not captured.
+        </div>
+      )}
       {EV_DATA.map((e, i) => (
         <div key={e.domain} style={{ marginBottom:10 }}>
           <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
-            <span style={{ fontSize:11, fontWeight:600, maxWidth:200, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{e.domain}</span>
-            <span style={{ fontSize:10, fontWeight:700, color:textColors[e.level] }}>{labels[e.level]}</span>
+            <span style={{ fontSize:11, fontWeight:600, maxWidth:260, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{e.domain}</span>
+            {!simple && <span style={{ fontSize:10, fontWeight:700, color:textColors[e.level] }}>{labels[e.level]}</span>}
           </div>
           <div style={{ height:7, background:C.border, borderRadius:4, overflow:"hidden" }}>
             <div
               className={animate ? "bar-animate" : ""}
               style={{
-                height:"100%", width:`${e.pct}%`, background:colors[e.level],
+                height:"100%", width:`${e.pct}%`, background:colors[e.level] === "transparent" ? C.border2 : colors[e.level],
                 borderRadius:4, animationDelay:`${i*0.07}s`
               }}
             />
           </div>
         </div>
       ))}
-      <div style={{ display:"flex", gap:12, marginTop:8 }}>
-        {[["strong",C.green],["partial",C.amber],["none",C.border2]].map(([k,col])=>(
-          <div key={k} style={{ display:"flex", alignItems:"center", gap:4, fontSize:9, color:C.tm }}>
-            <div style={{ width:8, height:8, borderRadius:2, background:col, border:k==="none"?`1px solid ${C.border2}`:"none" }} />
-            {k==="strong"?"Strong":k==="partial"?"Partial":"Not captured"}
-          </div>
-        ))}
-      </div>
+      {!simple && (
+        <div style={{ display:"flex", gap:12, marginTop:8 }}>
+          {[["strong",C.green],["partial",C.amber],["none",C.border2]].map(([k,col])=>(
+            <div key={k} style={{ display:"flex", alignItems:"center", gap:4, fontSize:9, color:C.tm }}>
+              <div style={{ width:8, height:8, borderRadius:2, background:col, border:k==="none"?`1px solid ${C.border2}`:"none" }} />
+              {k==="strong"?"Strong":k==="partial"?"Partial":"Not captured"}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
 /* ─── COMPLETENESS RING ───────────────────────────────────── */
-function CompletenessRing({ pct, animate }) {
-  const r = 19, circ = 2 * Math.PI * r;
+function CompletenessRing({ pct, animate, size=60 }) {
+  const r = size/2 - 5, circ = 2 * Math.PI * r;
   const offset = circ * (1 - pct / 100);
   return (
-    <div style={{ position:"relative", width:46, height:46, flexShrink:0 }}>
-      <svg width="46" height="46" viewBox="0 0 46 46" style={{ transform:"rotate(-90deg)" }}>
-        <circle cx="23" cy="23" r={r} fill="none" stroke="#B2EBF2" strokeWidth="5" />
+    <div style={{ position:"relative", width:size, height:size, flexShrink:0 }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform:"rotate(-90deg)" }}>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#B2EBF2" strokeWidth="6" />
         <circle
           className={animate ? "ring-animate" : ""}
-          cx="23" cy="23" r={r} fill="none"
+          cx={size/2} cy={size/2} r={r} fill="none"
           stroke={pct < 50 ? C.amber : pct < 80 ? C.teal : C.green}
-          strokeWidth="5"
+          strokeWidth="6"
           strokeDasharray={circ}
           strokeDashoffset={offset}
           strokeLinecap="round"
@@ -246,7 +237,7 @@ function CompletenessRing({ pct, animate }) {
         />
       </svg>
       <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center",
-        justifyContent:"center", fontSize:12, fontWeight:800,
+        justifyContent:"center", fontSize:size/4, fontWeight:800,
         color: pct<50?C.amber:pct<80?C.teal:C.green }}>{pct}%</div>
     </div>
   );
@@ -267,22 +258,6 @@ const FLAGS_INIT = [
   { id:3, text:"Medication administration time missing from intervention log" },
 ];
 
-const SKILLS = ["Scene Safety Assessment","Patient Assessment (primary)","Airway Management","Medication Administration","Patient Handoff Communication"];
-
-const QUOTA = [
-  { name:"Cardiac / ACS",        target:8, actual:7 },
-  { name:"Respiratory Distress", target:6, actual:6 },
-  { name:"Pediatric Encounters", target:4, actual:1 },
-  { name:"Trauma (multi-system)",target:5, actual:3 },
-  { name:"OB / Neonatal",        target:2, actual:0 },
-];
-
-const COHORTS = [
-  { name:"Paramedic Fall '24", students:12, atRisk:2, pct:68, color:C.teal },
-  { name:"EMT Spring '25",     students:28, atRisk:4, pct:42, color:"#7C3AED" },
-  { name:"AEMT Cohort B",      students: 9, atRisk:1, pct:81, color:C.green },
-];
-
 /* ─── SCREEN 1: QUEUE ─────────────────────────────────────── */
 function QueueScreen({ onOpenShift }) {
   const tiers = [
@@ -294,7 +269,6 @@ function QueueScreen({ onOpenShift }) {
 
   return (
     <div className="screen-enter" style={{ padding:"22px 24px", maxWidth:1100, margin:"0 auto" }}>
-      {/* Header */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:12, marginBottom:4 }}>
         <div>
           <div style={{ fontSize:20, fontWeight:800 }}>Shift Review Queue</div>
@@ -303,7 +277,6 @@ function QueueScreen({ onOpenShift }) {
         <Btn variant="teal" size="sm">Export Report</Btn>
       </div>
 
-      {/* Metrics */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, margin:"16px 0" }}>
         {[
           { n:14, l:"Awaiting Review",      s:"3 overdue",              col:C.teal,  hi:true  },
@@ -323,7 +296,6 @@ function QueueScreen({ onOpenShift }) {
         ))}
       </div>
 
-      {/* Filters */}
       <div style={{ display:"flex", gap:7, marginBottom:18, flexWrap:"wrap" }}>
         <input placeholder="Search by student, location, competency…" style={{
           flex:1, minWidth:160, padding:"7px 12px", borderRadius:6,
@@ -333,14 +305,10 @@ function QueueScreen({ onOpenShift }) {
           <select key={p} style={{ padding:"7px 11px", borderRadius:6, border:`1px solid ${C.border}`,
             fontSize:11, color:C.t2, background:C.surface, fontFamily:"inherit", cursor:"pointer" }}>
             <option>{p}</option>
-            {p==="All Cohorts" && <><option>Paramedic Fall '24</option><option>EMT Spring '25</option><option>AEMT Cohort B</option></>}
-            {p==="All Competencies" && <><option>Respiratory</option><option>Cardiac</option><option>Trauma</option></>}
-            {p==="Last 7 days" && <><option>Last 14 days</option><option>This rotation</option></>}
           </select>
         ))}
       </div>
 
-      {/* Shift tiers */}
       {tiers.map(tier => {
         const shifts = SHIFTS.filter(s => s.tier === tier.key);
         if (!shifts.length) return null;
@@ -417,27 +385,30 @@ function ReviewScreen({ shift, onBack }) {
     setTimeout(() => setFlags(prev => prev.map(f => f.id===id ? {...f, resolved:true, resolving:false} : f)), 300);
   };
   const openFlags = flags.filter(f => !f.resolved).length;
+  const canApprove = openFlags === 0;
 
   if (approved) return (
     <div className="screen-enter" style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"70vh" }}>
-      <div style={{ textAlign:"center", maxWidth:400 }}>
-        <div style={{ fontSize:56, marginBottom:16 }}>✅</div>
-        <div style={{ fontSize:22, fontWeight:800, marginBottom:8 }}>Feedback Approved & Sent</div>
+      <div style={{ textAlign:"center", maxWidth:440 }}>
+        <div style={{ width:80, height:80, borderRadius:"50%", background:C.greenBg,
+          display:"flex", alignItems:"center", justifyContent:"center", fontSize:40, margin:"0 auto 20px" }}>✓</div>
+        <div style={{ fontSize:22, fontWeight:800, marginBottom:8 }}>Feedback Sent to Student</div>
         <div style={{ fontSize:13, color:C.t2, lineHeight:1.7, marginBottom:20 }}>
-          Priya Anand has been notified. Feedback is logged under your name as the reviewing instructor.
+          {shift?.name || "Priya Anand"} has been notified. Feedback is logged under your name as the reviewing instructor and attached to their competency record.
         </div>
         <div style={{ padding:"12px 16px", background:C.greenBg, borderRadius:8, fontSize:12,
-          color:C.green, fontWeight:600, marginBottom:24 }}>
-          Cardiac Assessment competency — evidence confirmed. Logged to accreditation record.
+          color:C.green, fontWeight:600, marginBottom:24, textAlign:"left" }}>
+          ✓ Cardiac Assessment competency evidence confirmed<br/>
+          ✓ Accreditation thread updated<br/>
+          ✓ Student notified via email & in-app
         </div>
-        <Btn variant="ghost" onClick={() => { setApproved(false); onBack(); }}>← Back to Queue</Btn>
+        <Btn variant="navy" onClick={() => { setApproved(false); onBack(); }}>← Back to Queue</Btn>
       </div>
     </div>
   );
 
   return (
     <div className="screen-enter" style={{ padding:"22px 24px", maxWidth:1140, margin:"0 auto" }}>
-      {/* Breadcrumb */}
       <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:18, flexWrap:"wrap" }}>
         <Btn variant="ghost" size="sm" onClick={onBack}>← Queue</Btn>
         <span style={{ color:C.tm }}>/</span>
@@ -448,10 +419,8 @@ function ReviewScreen({ shift, onBack }) {
       </div>
 
       <div style={{ display:"grid", gridTemplateColumns:"1fr 390px", gap:14 }}>
-        {/* LEFT */}
         <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
 
-          {/* Encounter Summary */}
           <Card>
             <CardHd title="Patient Encounter Summary" sub="Auto-extracted from student log · Oct 14, 14:18–15:02"
               right={<Badge type="navy">Cardiac Assessment</Badge>} />
@@ -459,7 +428,6 @@ function ReviewScreen({ shift, onBack }) {
               <div style={{ fontSize:12, color:C.t2, lineHeight:1.65, marginBottom:12 }}>
                 <strong style={{ color:C.t1 }}>Chief Complaint:</strong> 58M, chest pain radiating to left arm × 45 min. Diaphoretic, pale. PMH: HTN, DM type 2. 12-lead confirmed ST elevation V2–V4.
               </div>
-              {/* Vitals */}
               <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:7, marginBottom:14 }}>
                 {[
                   { l:"HR",           v:"104",    s:"Tachycardic",   warn:true  },
@@ -493,11 +461,9 @@ function ReviewScreen({ shift, onBack }) {
             </CardBd>
           </Card>
 
-          {/* AI Draft */}
           <Card>
             <CardHd title="AI-Drafted Feedback" sub="Review, edit, and approve — your name will be on record" right={<AiChip />} />
             <CardBd>
-              {/* Confidence */}
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
                 <span style={{ fontSize:11, fontWeight:600, color:C.t2 }}>Draft confidence</span>
                 <div style={{ flex:1, height:4, background:C.border, borderRadius:2, overflow:"hidden" }}>
@@ -520,19 +486,24 @@ function ReviewScreen({ shift, onBack }) {
               <div style={{ fontSize:10, color:C.tm, display:"flex", alignItems:"center", gap:4, marginTop:5 }}>
                 ✏️ Editing this draft saves your changes. Final feedback is attributed to you, not the AI.
               </div>
-              <div style={{ display:"flex", gap:8, paddingTop:12, borderTop:`1px solid ${C.border}`, marginTop:12, flexWrap:"wrap" }}>
-                <Btn variant="green" onClick={() => setApproved(true)}>✓ Approve & Send to Student</Btn>
+              <div style={{ display:"flex", gap:8, paddingTop:12, borderTop:`1px solid ${C.border}`, marginTop:12, flexWrap:"wrap", alignItems:"center" }}>
+                <Btn variant="green" disabled={!canApprove} onClick={() => setApproved(true)}>
+                  ✓ Approve & Send to Student
+                </Btn>
                 <Btn variant="ghost">Save as Draft</Btn>
                 <Btn variant="danger" size="sm">Flag for Second Review</Btn>
+                {!canApprove && (
+                  <span style={{ fontSize:10, color:C.amber, fontWeight:600, marginLeft:"auto" }}>
+                    Resolve {openFlags} data gap{openFlags>1?"s":""} to approve →
+                  </span>
+                )}
               </div>
             </CardBd>
           </Card>
         </div>
 
-        {/* RIGHT */}
         <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
 
-          {/* Evidence Gauge */}
           <Card>
             <CardHd title="Competency Evidence Map" right={<span style={{ fontSize:10, color:C.tm }}>NRP Framework</span>} />
             <CardBd>
@@ -546,7 +517,6 @@ function ReviewScreen({ shift, onBack }) {
             </CardBd>
           </Card>
 
-          {/* Data Flags */}
           <Card>
             <CardHd title="Data Gaps" right={<Badge type={openFlags>0?"amber":"green"}>{openFlags} open</Badge>} />
             <CardBd>
@@ -575,10 +545,15 @@ function ReviewScreen({ shift, onBack }) {
                   </div>
                 </div>
               ))}
+              {canApprove && (
+                <div style={{ padding:"9px 11px", background:C.greenBg, borderRadius:6,
+                  fontSize:11, color:C.green, fontWeight:600, textAlign:"center" }}>
+                  ✓ All flags resolved — ready to approve
+                </div>
+              )}
             </CardBd>
           </Card>
 
-          {/* Accreditation Thread */}
           <Card>
             <CardHd title="Accreditation Thread" right={<AiChip>Auto-tracked</AiChip>} />
             <CardBd>
@@ -605,167 +580,266 @@ function ReviewScreen({ shift, onBack }) {
 
 /* ─── SCREEN 3: STUDENT LOG ───────────────────────────────── */
 const STU_CHECKS = [
-  { label:"Chief complaint documented", field:"cc"  },
-  { label:"Patient history obtained",   field:"hx"  },
-  { label:"HR recorded",                field:"hr"  },
-  { label:"BP recorded",                field:"bp"  },
-  { label:"SpO₂ recorded",              field:"spo2"},
-  { label:"Interventions listed",       field:"int" },
-  { label:"PCR / Handoff documented",   field:"pcr" },
+  { label:"Chief complaint documented", field:"cc",
+    why:"Chief complaint anchors the whole encounter. Instructors use it to judge whether your assessment addressed what the patient actually presented with.",
+    good:"e.g. \"58-year-old male, chest pain radiating to left arm, onset 45 minutes ago, 8/10 severity, diaphoretic.\"" },
+  { label:"Patient history obtained",   field:"hx",
+    why:"PMH shapes differential diagnosis and treatment decisions. Missing history is one of the top competency deductions on cardiac calls.",
+    good:"e.g. \"PMH: HTN, Type 2 DM. Meds: metoprolol, metformin. Allergies: NKDA. Last meal 2h ago.\"" },
+  { label:"HR recorded",   field:"hr",
+    why:"Heart rate is a required vital for every encounter and part of the Vital Signs Documentation competency.",
+    good:"Enter a number (e.g. 104). If irregular, note rhythm in interventions." },
+  { label:"BP recorded",   field:"bp",
+    why:"Blood pressure is required and directly maps to hemodynamic status assessment.",
+    good:"Format: systolic/diastolic (e.g. 158/94). Log serial BPs in interventions field on cardiac calls." },
+  { label:"SpO₂ recorded", field:"spo2",
+    why:"Oxygen saturation is a required vital and justifies oxygen therapy decisions.",
+    good:"Enter as % (e.g. 96). Note delivery method used in interventions if supplemental O₂ given." },
+  { label:"Interventions listed", field:"int",
+    why:"Interventions are the primary evidence for skill-based competencies. Instructors cannot credit skills you don't document.",
+    good:"List each intervention with dose/route/time. e.g. \"12-Lead ECG at 14:22 · Aspirin 324mg PO at 14:24 · IV 18g R-AC.\"" },
+  { label:"PCR / Handoff documented",   field:"pcr",
+    why:"Handoff documentation is required by CAAHEP Appendix G and is the #1 reason encounters get flagged incomplete. Without it, competency cannot be signed off.",
+    good:"e.g. \"Handoff to Dr. Chen at St. Luke's ED at 15:02. SBAR given. All interventions and vitals communicated. Report signed.\"" },
 ];
 
 function StudentScreen() {
   const [vals, setVals] = useState({ cc:"58M, chest pain radiating to left arm", hx:"HTN, DM type 2. Onset 45 min ago.", hr:"104", bp:"158/94", spo2:"96", int:"12-Lead ECG, Aspirin 324mg, IV access 18g", pcr:"" });
   const [submitted, setSubmitted] = useState(false);
+  const [openGuide, setOpenGuide] = useState(null);
 
   const set = (k, v) => setVals(p => ({ ...p, [k]:v }));
   const done = STU_CHECKS.filter(c => vals[c.field] && vals[c.field].trim().length > 3);
   const pct = Math.round((done.length / STU_CHECKS.length) * 100);
   const hasPcr = vals.pcr.trim().length > 3;
+  const canSubmit = done.length >= 6;
 
   const cov = [
     { name:"Scene Safety",       pct:90,             col:C.green },
     { name:"Patient Assessment", pct:80,             col:C.green },
     { name:"Cardiac Mgmt",       pct:75,             col:C.teal  },
-    { name:"Vitals Docs",        pct:50,             col:C.amber },
-    { name:"Handoff (PCR)",      pct:hasPcr?75:5,   col:hasPcr?C.green:C.red },
+    { name:"Vitals Docs",        pct: (vals.hr && vals.bp && vals.spo2)?75:40,  col:(vals.hr && vals.bp && vals.spo2)?C.green:C.amber },
+    { name:"Handoff (PCR)",      pct:hasPcr?80:8,    col:hasPcr?C.green:C.red },
   ];
 
   if (submitted) return (
-    <div className="screen-enter" style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"70vh" }}>
-      <div style={{ textAlign:"center", maxWidth:360 }}>
-        <div style={{ fontSize:52, marginBottom:14 }}>📋</div>
-        <div style={{ fontSize:20, fontWeight:800, marginBottom:8 }}>Encounter Submitted</div>
-        <div style={{ fontSize:13, color:C.t2, lineHeight:1.7, marginBottom:20 }}>Your shift log has been sent to Dr. Elena Moss for review. AI feedback will be available once approved.</div>
-        <Btn variant="ghost" onClick={() => { setSubmitted(false); setVals(p=>({...p,pcr:""})); }}>← Log Another</Btn>
+    <div className="screen-enter" style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"70vh", padding:24 }}>
+      <div style={{ textAlign:"center", maxWidth:460 }}>
+        <div style={{ width:80, height:80, borderRadius:"50%", background:C.tealBg,
+          display:"flex", alignItems:"center", justifyContent:"center", fontSize:40, margin:"0 auto 20px" }}>📋</div>
+        <div style={{ fontSize:22, fontWeight:800, marginBottom:10 }}>Submitted</div>
+        <div style={{ fontSize:13, color:C.t2, lineHeight:1.7, marginBottom:24 }}>
+          Your shift is with <strong>Dr. Elena Moss</strong> for review. You'll be notified when feedback is ready.
+        </div>
+        <Btn variant="navy" onClick={() => { setSubmitted(false); setVals(p=>({...p,pcr:""})); }}>← Log Another Shift</Btn>
       </div>
     </div>
   );
 
   return (
-    <div className="screen-enter" style={{ padding:"22px 24px", maxWidth:1100, margin:"0 auto" }}>
+    <div className="screen-enter" style={{ padding:"22px 24px", maxWidth:1180, margin:"0 auto" }}>
       <div style={{ marginBottom:16 }}>
         <div style={{ fontSize:20, fontWeight:800 }}>Log a Patient Encounter</div>
-        <div style={{ fontSize:12, color:C.t2, marginTop:2 }}>AI checks your log in real time and previews competency coverage before you submit</div>
+        <div style={{ fontSize:12, color:C.t2, marginTop:2 }}>AI checks your log in real time and previews competency coverage before you submit.</div>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 300px", gap:18, alignItems:"start" }}>
-        {/* Phone frame */}
-        <div style={{ display:"flex", justifyContent:"center" }}>
-          <div style={{ background:"#111827", borderRadius:30, padding:8,
-            boxShadow:"0 24px 64px rgba(0,0,0,.3)", width:"100%", maxWidth:320 }}>
-            <div style={{ background:"#fff", borderRadius:24, overflow:"hidden", minHeight:580, display:"flex", flexDirection:"column" }}>
-              <div style={{ background:C.navy, color:"#fff", padding:"14px 16px" }}>
-                <div style={{ fontSize:13, fontWeight:700 }}>New Encounter Log</div>
-                <div style={{ fontSize:10, color:"rgba(255,255,255,.5)", marginTop:2 }}>Oct 14 · AMR Field Shift · Preceptor: J. Calderon</div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 380px", gap:18, alignItems:"start" }}>
+
+        {/* LEFT: Log form */}
+        <Card>
+          <CardHd title="New Encounter Log" sub="Oct 14 · AMR Field Shift · Preceptor: J. Calderon" />
+          <CardBd>
+            <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+
+              <div>
+                <SecLabel>Chief Complaint</SecLabel>
+                <textarea value={vals.cc} onChange={e=>set("cc",e.target.value)} rows={2}
+                  placeholder="Age, sex, presenting complaint, duration, severity…"
+                  style={{ width:"100%", padding:"9px 11px", borderRadius:6, border:`1px solid ${C.border}`,
+                    fontSize:12, fontFamily:"inherit", resize:"vertical", outline:"none", lineHeight:1.6 }}
+                  onFocus={e=>e.target.style.borderColor=C.teal}
+                  onBlur={e=>e.target.style.borderColor=C.border}
+                />
               </div>
-              <div style={{ padding:13, flex:1, display:"flex", flexDirection:"column", gap:10 }}>
-                {[
-                  { k:"cc",  l:"Chief Complaint",              ta:true  },
-                  { k:"hx",  l:"Patient History (PMH, onset)", ta:true  },
-                  { k:"int", l:"Interventions",                ta:true  },
-                ].map(f => (
-                  <div key={f.k}>
-                    <div style={{ fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:".5px", color:C.tm, marginBottom:3 }}>{f.l}</div>
-                    <textarea value={vals[f.k]} onChange={e=>set(f.k,e.target.value)} rows={2}
-                      style={{ width:"100%", padding:"7px 9px", borderRadius:6, border:`1px solid ${C.border}`,
-                        fontSize:11, fontFamily:"inherit", resize:"none", outline:"none" }}
-                      onFocus={e=>e.target.style.borderColor=C.teal}
-                      onBlur={e=>e.target.style.borderColor=C.border}
-                    />
-                  </div>
-                ))}
-                <div>
-                  <div style={{ fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:".5px", color:C.tm, marginBottom:3 }}>Vitals</div>
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:5 }}>
-                    {["hr","bp","spo2"].map(k => (
-                      <input key={k} value={vals[k]} onChange={e=>set(k,e.target.value)}
-                        placeholder={k.toUpperCase()}
-                        style={{ padding:"7px 9px", borderRadius:6, border:`1px solid ${C.border}`,
-                          fontSize:11, fontFamily:"inherit", outline:"none" }}
+
+              <div>
+                <SecLabel>Patient History / PMH</SecLabel>
+                <textarea value={vals.hx} onChange={e=>set("hx",e.target.value)} rows={2}
+                  placeholder="PMH, medications, allergies, last meal, onset…"
+                  style={{ width:"100%", padding:"9px 11px", borderRadius:6, border:`1px solid ${C.border}`,
+                    fontSize:12, fontFamily:"inherit", resize:"vertical", outline:"none", lineHeight:1.6 }}
+                  onFocus={e=>e.target.style.borderColor=C.teal}
+                  onBlur={e=>e.target.style.borderColor=C.border}
+                />
+              </div>
+
+              <div>
+                <SecLabel>Vitals</SecLabel>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                  {[
+                    { k:"hr",   l:"HR (bpm)" },
+                    { k:"bp",   l:"BP (mmHg)" },
+                    { k:"spo2", l:"SpO₂ (%)" },
+                    { k:"rr",   l:"RR (/min)" },
+                  ].map(f => (
+                    <div key={f.k}>
+                      <div style={{ fontSize:10, color:C.tm, marginBottom:3, fontWeight:600 }}>{f.l}</div>
+                      <input value={vals[f.k]||""} onChange={e=>set(f.k,e.target.value)}
+                        placeholder={f.l.split(" ")[0]}
+                        style={{ width:"100%", padding:"9px 11px", borderRadius:6, border:`1px solid ${C.border}`,
+                          fontSize:13, fontFamily:"var(--mono)", fontWeight:700, outline:"none" }}
                         onFocus={e=>e.target.style.borderColor=C.teal}
                         onBlur={e=>e.target.style.borderColor=C.border}
                       />
-                    ))}
-                    <input placeholder="RR" style={{ padding:"7px 9px", borderRadius:6, border:`1px solid ${C.border}`, fontSize:11, fontFamily:"inherit", outline:"none" }} />
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:".5px", color:C.tm, marginBottom:3, display:"flex", alignItems:"center", gap:4 }}>
-                    PCR / Handoff
-                    {!hasPcr && <span style={{ fontSize:8, fontWeight:800, color:C.red }}>MISSING</span>}
-                  </div>
-                  <textarea value={vals.pcr} onChange={e=>set("pcr",e.target.value)}
-                    placeholder="Describe handoff to receiving team..." rows={2}
-                    style={{ width:"100%", padding:"7px 9px", borderRadius:6,
-                      border:`1px solid ${!hasPcr?C.red:C.border}`, fontSize:11, fontFamily:"inherit", resize:"none", outline:"none" }}
-                    onFocus={e=>e.target.style.borderColor=C.teal}
-                    onBlur={e=>e.target.style.borderColor=(!hasPcr?C.red:C.border)}
-                  />
+                    </div>
+                  ))}
                 </div>
               </div>
-              <div style={{ padding:"10px 13px", borderTop:`1px solid ${C.border}` }}>
-                <div style={{ fontSize:10, fontWeight:600, textAlign:"center", marginBottom:7,
-                  color: done.length>=6 ? C.green : C.amber }}>
-                  {done.length>=6 ? "✓ Ready to submit" : `⚠ Complete ${STU_CHECKS.length-done.length} more items`}
+
+              <div>
+                <SecLabel>Interventions</SecLabel>
+                <textarea value={vals.int} onChange={e=>set("int",e.target.value)} rows={3}
+                  placeholder="List each intervention with dose, route, and time…"
+                  style={{ width:"100%", padding:"9px 11px", borderRadius:6, border:`1px solid ${C.border}`,
+                    fontSize:12, fontFamily:"inherit", resize:"vertical", outline:"none", lineHeight:1.6 }}
+                  onFocus={e=>e.target.style.borderColor=C.teal}
+                  onBlur={e=>e.target.style.borderColor=C.border}
+                />
+              </div>
+
+              <div>
+                <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:7 }}>
+                  <SecLabel style={{ marginBottom:0 }}>PCR / Handoff Documentation</SecLabel>
+                  {!hasPcr && <Badge type="red">Required</Badge>}
                 </div>
-                <button onClick={() => done.length>=6 && setSubmitted(true)} style={{
-                  width:"100%", padding:10, borderRadius:8, border:"none", cursor:"pointer",
-                  background: done.length>=6 ? C.green : C.navy,
-                  color:"#fff", fontSize:12, fontWeight:700, fontFamily:"inherit",
-                  transition:"background .2s, transform .1s"
-                }}>
-                  {done.length>=6 ? "Submit Encounter" : `Fix ${STU_CHECKS.length-done.length} issues first`}
+                <textarea value={vals.pcr} onChange={e=>set("pcr",e.target.value)} rows={3}
+                  placeholder="SBAR handoff, receiving provider, time, key items communicated…"
+                  style={{ width:"100%", padding:"9px 11px", borderRadius:6,
+                    border:`2px solid ${!hasPcr?C.red:C.border}`,
+                    background: !hasPcr ? "#FEF2F2" : C.surface,
+                    fontSize:12, fontFamily:"inherit", resize:"vertical", outline:"none", lineHeight:1.6,
+                    transition:"border-color .2s, background .2s" }}
+                  onFocus={e=>e.target.style.borderColor=C.teal}
+                  onBlur={e=>e.target.style.borderColor=(!hasPcr?C.red:C.border)}
+                />
+              </div>
+
+              {/* Submit */}
+              <div style={{ paddingTop:14, borderTop:`1px solid ${C.border}` }}>
+                <button
+                  disabled={!canSubmit}
+                  onClick={() => canSubmit && setSubmitted(true)}
+                  style={{
+                    width:"100%", padding:"14px", borderRadius:8, border:"none",
+                    cursor: canSubmit ? "pointer" : "not-allowed",
+                    background: canSubmit ? C.green : "#E2E8F0",
+                    color: canSubmit ? "#fff" : C.tm,
+                    fontSize:14, fontWeight:700, fontFamily:"inherit",
+                    transition:"all .2s"
+                  }}>
+                  {canSubmit ? "Submit for Review →" : `Fix issues first — ${STU_CHECKS.length-done.length} incomplete`}
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+          </CardBd>
+        </Card>
 
-        {/* Completeness panel */}
-        <div style={{ display:"flex", flexDirection:"column", gap:10, position:"sticky", top:22 }}>
-          {/* Score ring */}
-          <div style={{ display:"flex", alignItems:"center", gap:10, padding:12,
-            background:C.tealBg, borderRadius:8, border:`1px solid #B2EBF2` }}>
-            <CompletenessRing pct={pct} animate />
+        {/* RIGHT: AI Completeness Assistant */}
+        <div style={{ display:"flex", flexDirection:"column", gap:12, position:"sticky", top:22 }}>
+
+          {/* Score card */}
+          <div style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 16px",
+            background:C.tealBg, borderRadius:10, border:`1px solid #B2EBF2` }}>
+            <CompletenessRing pct={pct} animate size={64} />
             <div>
-              <div style={{ fontSize:12, fontWeight:700 }}>Log Completeness</div>
-              <div style={{ fontSize:10, color:C.t2, marginTop:2 }}>{done.length} of {STU_CHECKS.length} items complete</div>
+              <div style={{ fontSize:13, fontWeight:700 }}>Log Completeness</div>
+              <div style={{ fontSize:11, color:C.t2, marginTop:2 }}>{done.length} of {STU_CHECKS.length} items complete</div>
+              <div style={{ fontSize:10, color:C.teal, fontWeight:700, marginTop:3 }}>
+                {canSubmit ? "✓ Ready to submit" : `${STU_CHECKS.length-done.length} item${STU_CHECKS.length-done.length>1?"s":""} to go`}
+              </div>
             </div>
           </div>
 
+          {/* Checklist */}
           <Card>
             <CardHd><div style={{ fontSize:12, fontWeight:700 }}>Completeness Checklist</div></CardHd>
-            <div style={{ padding:"9px 14px", display:"flex", flexDirection:"column", gap:4 }}>
-              {STU_CHECKS.map((c, i) => {
+            <div style={{ padding:"8px 12px" }}>
+              {STU_CHECKS.map((c) => {
                 const isDone = vals[c.field] && vals[c.field].trim().length > 3;
-                const cls = isDone ? { bg:C.greenBg, col:C.green, icon:"✓" } : i>=5 ? { bg:C.redBg, col:C.red, icon:"✗" } : { bg:C.amberBg, col:C.amber, icon:"!" };
+                const isOpen = openGuide === c.field;
                 return (
-                  <div key={c.label} style={{ display:"flex", alignItems:"center", gap:6,
-                    padding:"6px 9px", borderRadius:6, background:cls.bg, color:cls.col,
-                    fontSize:11, transition:"all .2s" }}>
-                    <span style={{ fontWeight:700 }}>{cls.icon}</span>{c.label}
+                  <div key={c.field}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8,
+                      padding:"8px 10px", borderRadius:6,
+                      background: isDone ? C.greenBg : "#FEF7ED",
+                      marginBottom:4, transition:"all .2s" }}>
+                      <div style={{ width:16, height:16, borderRadius:"50%",
+                        background: isDone ? C.green : C.amber,
+                        color:"#fff", fontSize:9, fontWeight:800, flexShrink:0,
+                        display:"flex", alignItems:"center", justifyContent:"center" }}>
+                        {isDone ? "✓" : "!"}
+                      </div>
+                      <span style={{ fontSize:11, fontWeight:600, color: isDone ? C.green : C.t1, flex:1 }}>
+                        {c.label}
+                      </span>
+                      {!isDone && (
+                        <button onClick={() => setOpenGuide(isOpen ? null : c.field)} style={{
+                          padding:"3px 9px", borderRadius:4, border:`1px solid ${C.amber}`,
+                          background: isOpen ? C.amber : C.surface,
+                          color: isOpen ? "#fff" : C.amber,
+                          fontSize:10, fontWeight:700, cursor:"pointer", fontFamily:"inherit"
+                        }}>
+                          {isOpen ? "Close" : "Fix →"}
+                        </button>
+                      )}
+                    </div>
+                    {isOpen && !isDone && (
+                      <div className="panel-open" style={{
+                        margin:"0 4px 8px", padding:"12px 14px",
+                        background: C.surface, border:`1px solid ${C.amber}`,
+                        borderLeft:`3px solid ${C.amber}`, borderRadius:7
+                      }}>
+                        <div style={{ fontSize:9, fontWeight:700, textTransform:"uppercase",
+                          letterSpacing:".5px", color:C.amber, marginBottom:5 }}>Why this matters</div>
+                        <div style={{ fontSize:11, color:C.t2, lineHeight:1.6, marginBottom:10 }}>{c.why}</div>
+                        <div style={{ fontSize:9, fontWeight:700, textTransform:"uppercase",
+                          letterSpacing:".5px", color:C.teal, marginBottom:5 }}>What good looks like</div>
+                        <div style={{ fontSize:11, color:C.t2, lineHeight:1.6,
+                          padding:"8px 10px", background:C.tealBg, borderRadius:5,
+                          fontStyle:"italic", marginBottom:10 }}>{c.good}</div>
+                        <button onClick={() => setOpenGuide(null)} style={{
+                          padding:"5px 12px", borderRadius:5, border:"none",
+                          background:C.navy, color:"#fff", fontSize:11, fontWeight:700,
+                          cursor:"pointer", fontFamily:"inherit"
+                        }}>Got it</button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
           </Card>
 
+          {/* Competency Coverage Preview */}
           <Card>
-            <CardHd right={<AiChip>Estimate</AiChip>}><div style={{ fontSize:12, fontWeight:700 }}>Competency Coverage</div></CardHd>
-            <div style={{ padding:"9px 14px", display:"flex", flexDirection:"column", gap:4 }}>
+            <CardHd right={<AiChip>Live preview</AiChip>}>
+              <div style={{ fontSize:12, fontWeight:700 }}>Competency Coverage</div>
+            </CardHd>
+            <div style={{ padding:"10px 14px 12px" }}>
               {cov.map(c => (
-                <div key={c.name} style={{ display:"flex", alignItems:"center", gap:7,
-                  padding:"6px 9px", background:C.bg, borderRadius:5 }}>
-                  <div style={{ fontSize:10, fontWeight:600, flex:1 }}>{c.name}</div>
-                  <div style={{ width:70, height:5, background:C.border, borderRadius:3, overflow:"hidden" }}>
+                <div key={c.name} style={{ marginBottom:8 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
+                    <span style={{ fontSize:10, fontWeight:600, color:C.t2 }}>{c.name}</span>
+                    <span style={{ fontSize:10, fontWeight:700, color:c.col, fontFamily:"var(--mono)" }}>{c.pct}%</span>
+                  </div>
+                  <div style={{ height:6, background:C.border, borderRadius:3, overflow:"hidden" }}>
                     <div style={{ height:"100%", width:`${c.pct}%`, background:c.col,
-                      borderRadius:3, transition:"width .4s, background .3s" }} />
+                      borderRadius:3, transition:"width .5s cubic-bezier(.4,0,.2,1), background .3s" }} />
                   </div>
                 </div>
               ))}
-              <div style={{ fontSize:10, color:C.tm, marginTop:2, lineHeight:1.5 }}>
-                Live preview. Instructor makes the final competency decision.
+              <div style={{ fontSize:10, color:C.tm, marginTop:8, lineHeight:1.5 }}>
+                Estimate updates as you fill fields. Instructor makes the final competency decision.
               </div>
             </div>
           </Card>
@@ -775,211 +849,108 @@ function StudentScreen() {
   );
 }
 
-/* ─── SCREEN 4: PRECEPTOR ─────────────────────────────────── */
-function PreceptorScreen() {
-  const [skillVals, setSkillVals] = useState({});
-  const [signed, setSigned] = useState(false);
-  const toggle = (i, v) => setSkillVals(p => ({ ...p, [i]: p[i]===v ? null : v }));
-
+/* ─── SCREEN 4: MY FEEDBACK ────────────────────────────────── */
+function MyFeedbackScreen() {
   return (
-    <div className="screen-enter" style={{ padding:"22px 24px", maxWidth:1100, margin:"0 auto" }}>
-      <div style={{ marginBottom:16 }}>
-        <div style={{ fontSize:20, fontWeight:800 }}>Field Preceptor Sign-Off</div>
-        <div style={{ fontSize:12, color:C.t2, marginTop:2 }}>Quick skill verification from the field — takes under 2 minutes</div>
+    <div className="screen-enter" style={{ padding:"32px 24px", maxWidth:720, margin:"0 auto" }}>
+
+      {/* Section 1: Header */}
+      <div style={{ marginBottom:20 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8, flexWrap:"wrap" }}>
+          <Badge type="green">✓ Reviewed & Approved</Badge>
+          <span style={{ fontSize:11, color:C.tm }}>Delivered Oct 15, 09:24</span>
+        </div>
+        <div style={{ fontSize:24, fontWeight:800, marginBottom:6 }}>Feedback from Dr. Elena Moss</div>
+        <div style={{ fontSize:12, color:C.t2, lineHeight:1.7 }}>
+          Oct 14 · AMR Field Shift · <strong>Cardiac Assessment</strong>
+        </div>
       </div>
-      <div style={{ display:"flex", justifyContent:"center" }}>
-        <div style={{ background:C.surface, borderRadius:14, border:`1px solid ${C.border}`,
-          width:"100%", maxWidth:440, overflow:"hidden", boxShadow:"0 4px 20px rgba(0,0,0,.08)" }}>
-          <div style={{ background:C.navy2, color:"#fff", padding:"16px 20px" }}>
-            <div style={{ fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:".5px",
-              color:"rgba(255,255,255,.45)", marginBottom:4 }}>Preceptor Review — J. Calderon, LP</div>
-            <div style={{ fontSize:17, fontWeight:800 }}>Priya Anand</div>
-            <div style={{ fontSize:11, color:"rgba(255,255,255,.5)", marginTop:2 }}>Oct 14 · AMR Field · Cardiac · 58M Chest Pain</div>
+
+      {/* Section 2: Feedback narrative */}
+      <Card style={{ marginBottom:20, borderLeft:`4px solid ${C.navy}` }}>
+        <CardBd style={{ padding:"20px 24px" }}>
+          <SecLabel style={{ color:C.navy2, marginBottom:12 }}>Instructor Feedback</SecLabel>
+          <div style={{ fontSize:13, color:C.t1, lineHeight:1.8 }}>
+            <p style={{ marginBottom:12 }}>
+              You demonstrated sound clinical reasoning during a challenging cardiac emergency. Your scene size-up was rapid and appropriate, and you correctly identified this 58-year-old male as a high-acuity STEMI presentation within the first two minutes.
+            </p>
+            <p style={{ marginBottom:12 }}>
+              Your intervention sequence was protocol-adherent and confident: aspirin, oxygen, IV access, and 12-lead ECG were all executed in the right order. You also maintained calm, therapeutic communication with the patient during transport — this is the kind of bedside presence that makes a real difference.
+            </p>
+            <p>
+              <strong>To grow from here:</strong> record serial vitals at 5-minute intervals on future cardiac calls, and always complete your PCR handoff before you leave the receiving facility. Both are required before I can fully sign off your Cardiac Assessment competency.
+            </p>
           </div>
-          {!signed ? (
-            <>
-              <div style={{ padding:"16px 20px", display:"flex", flexDirection:"column", gap:14 }}>
-                <div>
-                  <SecLabel>Encounter Summary (auto-extracted)</SecLabel>
-                  <div style={{ fontSize:12, color:C.t2, lineHeight:1.65, padding:"10px 12px",
-                    background:C.bg, borderRadius:7 }}>
-                    58-year-old male, STEMI presentation. Student performed 12-lead acquisition, aspirin administration, IV access, and coordinated pre-notification to receiving ED. Appropriate clinical reasoning demonstrated under supervision.
-                  </div>
-                </div>
-                <div>
-                  <SecLabel>Skills Observed — Tap to verify</SecLabel>
-                  <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                    {SKILLS.map((s, i) => (
-                      <div key={s} style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
-                        padding:"9px 12px", background:C.bg, borderRadius:7 }}>
-                        <span style={{ fontSize:12, fontWeight:600 }}>{s}</span>
-                        <div style={{ display:"flex", gap:4 }}>
-                          {[["yes","✓ Yes",C.green,C.greenBg],["no","✗ No",C.red,C.redBg]].map(([val,lbl,col,bg]) => (
-                            <button key={val} className="stgl" onClick={() => toggle(i, val)} style={{
-                              padding:"4px 10px", borderRadius:4, fontSize:10, fontWeight:700,
-                              cursor:"pointer", fontFamily:"inherit", border:`1px solid`,
-                              borderColor: skillVals[i]===val ? col : C.border,
-                              background: skillVals[i]===val ? bg : C.surface,
-                              color: skillVals[i]===val ? col : C.t2,
-                            }}>{lbl}</button>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:7 }}>
-                    <SecLabel style={{ marginBottom:0 }}>AI-Drafted Preceptor Note</SecLabel>
-                    <AiChip>Edit or approve</AiChip>
-                  </div>
-                  <div contentEditable suppressContentEditableWarning style={{
-                    padding:12, background:C.tealBg, borderRadius:7, border:`1px solid #B2EBF2`,
-                    fontSize:12, lineHeight:1.7, cursor:"text", outline:"none"
-                  }}>
-                    Student demonstrated confident clinical performance on this STEMI call. Scene management, patient assessment, and ALS intervention sequencing were appropriate and protocol-adherent. Recommend sign-off on Cardiac Assessment competency pending instructor documentation review.
-                  </div>
-                  <div style={{ fontSize:10, color:C.tm, marginTop:4 }}>Click to edit. This note attaches to the student's shift record.</div>
-                </div>
-              </div>
-              <div style={{ padding:"13px 20px", borderTop:`1px solid ${C.border}`, display:"flex", gap:8 }}>
-                <Btn variant="green" onClick={() => setSigned(true)} style={{ flex:1, justifyContent:"center" }}>✓ Submit Sign-Off</Btn>
-                <Btn variant="ghost">Flag Issue</Btn>
-              </div>
-            </>
-          ) : (
-            <div style={{ padding:32, textAlign:"center" }}>
-              <div style={{ fontSize:44, marginBottom:12 }}>📋</div>
-              <div style={{ fontSize:17, fontWeight:800, marginBottom:8 }}>Sign-Off Submitted</div>
-              <div style={{ fontSize:12, color:C.t2, lineHeight:1.65, marginBottom:16 }}>Dr. Elena Moss has been notified to complete the written feedback review.</div>
-              <Btn variant="ghost" onClick={() => { setSigned(false); setSkillVals({}); }}>← Reset</Btn>
+          <div style={{ marginTop:16, paddingTop:12, borderTop:`1px solid ${C.border}`,
+            display:"flex", alignItems:"center", gap:8 }}>
+            <div style={{ width:28, height:28, borderRadius:"50%", background:C.navy,
+              color:"#fff", fontSize:10, fontWeight:700,
+              display:"flex", alignItems:"center", justifyContent:"center" }}>EM</div>
+            <div>
+              <div style={{ fontSize:11, fontWeight:700 }}>Dr. Elena Moss</div>
+              <div style={{ fontSize:10, color:C.tm }}>Lead Instructor · Paramedic Program</div>
             </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── SCREEN 5: DIRECTOR ──────────────────────────────────── */
-function DirectorScreen() {
-  return (
-    <div className="screen-enter" style={{ padding:"22px 24px", maxWidth:1100, margin:"0 auto" }}>
-      <div style={{ marginBottom:16 }}>
-        <div style={{ fontSize:20, fontWeight:800 }}>Program Director Overview</div>
-        <div style={{ fontSize:12, color:C.t2, marginTop:2 }}>Cohort readiness, case quotas, and accreditation status — one view</div>
-      </div>
-
-      {/* Accred Banner */}
-      <div style={{ padding:"16px 20px", borderRadius:12,
-        background:`linear-gradient(135deg,${C.navy},${C.navy2})`,
-        color:"#fff", display:"flex", alignItems:"center", gap:20, marginBottom:16 }}>
-        <div style={{ flex:1 }}>
-          <div style={{ fontSize:14, fontWeight:700 }}>CoAEMSP Accreditation Review — Paramedic Fall '24</div>
-          <div style={{ fontSize:11, color:"rgba(255,255,255,.5)", marginTop:3, lineHeight:1.6 }}>
-            Required case quotas, competency sign-offs, and documentation must be complete before the review window opens.
           </div>
-        </div>
-        <div style={{ textAlign:"right", flexShrink:0 }}>
-          <div style={{ fontSize:34, fontWeight:800, fontFamily:"var(--mono)", color:C.amber, lineHeight:1 }}>67</div>
-          <div style={{ fontSize:9, color:"rgba(255,255,255,.4)", textTransform:"uppercase", letterSpacing:".5px" }}>days to review</div>
-        </div>
-      </div>
+        </CardBd>
+      </Card>
 
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:13, marginBottom:14 }}>
-        {/* Quotas */}
-        <Card>
-          <CardHd title="Paramedic Fall '24 — Case Quotas" right={<Badge type="amber">2 gaps</Badge>} />
-          <CardBd>
-            {QUOTA.map((q, i) => {
-              const pct = Math.round((q.actual/q.target)*100);
-              const col = pct>=80?C.green:pct>=40?C.amber:C.red;
-              const fillCls = pct>=80?"ok":pct>=40?"warn":"dg";
-              return (
-                <div key={q.name} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
-                  <div style={{ fontSize:11, color:C.t2, flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{q.name}</div>
-                  <div style={{ width:80, height:6, background:C.border, borderRadius:3, overflow:"hidden", flexShrink:0 }}>
-                    <div className="bar-animate" style={{ height:"100%", width:`${pct}%`, background:col, borderRadius:3, animationDelay:`${i*0.08}s` }} />
-                  </div>
-                  <div style={{ fontSize:11, fontWeight:700, fontFamily:"var(--mono)", minWidth:32, textAlign:"right", color:col }}>{q.actual}/{q.target}</div>
-                </div>
-              );
-            })}
-          </CardBd>
-        </Card>
+      {/* Section 3: Competency evidence */}
+      <Card style={{ marginBottom:20 }}>
+        <CardHd title="How your encounter mapped to competency" />
+        <CardBd>
+          <EvidenceGauge animate simple />
+        </CardBd>
+      </Card>
 
-        {/* Cohort bars + AI signal */}
-        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-          {COHORTS.map(c => {
-            const col = c.pct>70?C.green:c.pct>50?C.amber:C.red;
-            return (
-              <Card key={c.name} style={{ borderLeft:`3px solid ${c.color}`, overflow:"hidden" }}>
-                <div style={{ padding:"11px 14px", display:"flex", alignItems:"center", gap:8 }}>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:12, fontWeight:700 }}>{c.name}</div>
-                    <div style={{ fontSize:10, color:C.t2, marginTop:1 }}>{c.students} students · {c.atRisk} at risk</div>
-                  </div>
-                  <div style={{ textAlign:"right" }}>
-                    <div style={{ fontSize:18, fontWeight:800, fontFamily:"var(--mono)", color:col }}>{c.pct}%</div>
-                    <div style={{ fontSize:9, color:C.tm }}>complete</div>
-                  </div>
+      {/* Section 4: What's next */}
+      <Card style={{ marginBottom:16 }}>
+        <CardHd title="What's next" sub="Coaching notes from this encounter + your program progress" />
+        <div style={{ padding:"8px 8px 14px" }}>
+          {[
+            {
+              icon:"❤️", iconBg:C.redBg, iconCol:C.red,
+              title:"Log serial vitals on your next cardiac call",
+              desc:"Coaching note from this encounter — record vitals every 5 minutes.",
+              tag:"Coaching note"
+            },
+            {
+              icon:"📄", iconBg:C.amberBg, iconCol:C.amber,
+              title:"Complete your PCR documentation",
+              desc:"Required before Cardiac Assessment competency is fully signed off.",
+              tag:"Required"
+            },
+            {
+              icon:"📊", iconBg:C.tealBg, iconCol:C.teal,
+              title:"You need 1 more cardiac encounter",
+              desc:"Program quota: 7 of 8 cardiac encounters logged so far.",
+              tag:"Progress"
+            },
+          ].map(item => (
+            <div key={item.title} style={{ display:"flex", gap:12, alignItems:"flex-start",
+              padding:"12px 16px", margin:"4px 8px", borderRadius:8,
+              transition:"background .15s", cursor:"pointer" }}
+              onMouseEnter={e => e.currentTarget.style.background = C.bg}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            >
+              <div style={{ width:36, height:36, borderRadius:8, background:item.iconBg,
+                display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>
+                {item.icon}
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:3, flexWrap:"wrap" }}>
+                  <div style={{ fontSize:13, fontWeight:700 }}>{item.title}</div>
+                  <span style={{ fontSize:9, fontWeight:700, color:item.iconCol,
+                    padding:"1px 7px", borderRadius:3, background:item.iconBg,
+                    textTransform:"uppercase", letterSpacing:".4px" }}>{item.tag}</span>
                 </div>
-                <div style={{ height:4, background:C.border }}>
-                  <div className="bar-animate" style={{ height:"100%", width:`${c.pct}%`, background:c.color }} />
-                </div>
-              </Card>
-            );
-          })}
-          <Card>
-            <CardHd right={<AiChip>Cross-product</AiChip>}><div style={{ fontSize:12, fontWeight:700 }}>AI Readiness Signal</div></CardHd>
-            <div style={{ padding:"11px 14px", fontSize:11, color:C.t2, lineHeight:1.7 }}>
-              Based on shift logs, exam scores, and case-type coverage, <strong style={{ color:C.red }}>4 students</strong> are at risk of not meeting NREMT requirements. Highest-risk gap: <strong>OB/neonatal encounters</strong> — only 1 of 8 required logged to date.
+                <div style={{ fontSize:11, color:C.t2, lineHeight:1.6 }}>{item.desc}</div>
+              </div>
             </div>
-          </Card>
+          ))}
         </div>
-      </div>
-
-      {/* Risk Table */}
-      <Card>
-        <CardHd title="Students Flagged at Risk" right={
-          <div style={{ display:"flex", gap:6 }}>
-            <AiChip>AI-monitored</AiChip>
-            <Badge type="red">4 students</Badge>
-          </div>
-        } />
-        <div style={{ overflowX:"auto" }}>
-          <table style={{ width:"100%", borderCollapse:"collapse" }}>
-            <thead>
-              <tr>
-                {["Student","Cohort","Issue","Shift Status","Risk",""].map(h => (
-                  <th key={h} style={{ textAlign:"left", padding:"8px 12px", fontSize:9,
-                    fontWeight:700, textTransform:"uppercase", letterSpacing:".5px",
-                    color:C.tm, borderBottom:`1px solid ${C.border}` }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                { name:"Marcus Reyes", cohort:"Paramedic Fall '24", issue:"Missing 3 required case types", shift:"2 weeks behind", risk:"High" },
-                { name:"Sam Torres",   cohort:"AEMT Cohort B",      issue:"OB/neonatal quota: 0/2 encounters", shift:"On track", risk:"Medium" },
-                { name:"Jordan Park",  cohort:"EMT Spring '25",     issue:"Feedback approval delayed 8 days", shift:"Unclear",   risk:"Medium" },
-                { name:"Anya Singh",   cohort:"EMT Spring '25",     issue:"Exam readiness below threshold",   shift:"Minimal logs", risk:"High" },
-              ].map((s, i) => (
-                <tr key={s.name}>
-                  <td style={{ padding:"9px 12px", fontWeight:700, borderBottom:`1px solid ${C.border}` }}>{s.name}</td>
-                  <td style={{ padding:"9px 12px", color:C.t2, borderBottom:`1px solid ${C.border}` }}>{s.cohort}</td>
-                  <td style={{ padding:"9px 12px", color:C.t2, borderBottom:`1px solid ${C.border}`, maxWidth:200 }}>{s.issue}</td>
-                  <td style={{ padding:"9px 12px", color:C.t2, borderBottom:`1px solid ${C.border}` }}>{s.shift}</td>
-                  <td style={{ padding:"9px 12px", borderBottom:`1px solid ${C.border}` }}>
-                    <Badge type={s.risk==="High"?"red":"amber"}>{s.risk}</Badge>
-                  </td>
-                  <td style={{ padding:"9px 12px", borderBottom:`1px solid ${C.border}` }}>
-                    <Btn variant="ghost" size="sm">Advise →</Btn>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div style={{ padding:"12px 20px", borderTop:`1px solid ${C.border}`, textAlign:"right" }}>
+          <a href="#" onClick={e=>e.preventDefault()} style={{ fontSize:11, fontWeight:700,
+            color:C.teal, textDecoration:"none" }}>View All Requirements →</a>
         </div>
       </Card>
     </div>
@@ -988,17 +959,16 @@ function DirectorScreen() {
 
 /* ─── ROOT APP ────────────────────────────────────────────── */
 const TABS = [
-  { id:"queue",     role:"Instructor",   label:"Shift Queue"           },
-  { id:"review",    role:"Instructor",   label:"AI Draft Review"       },
-  { id:"student",   role:"Student",      label:"Log Assistant"         },
-  { id:"preceptor", role:"Preceptor",    label:"Field Sign-Off"        },
-  { id:"director",  role:"Program Dir.", label:"Cohort & Accreditation"},
+  { id:"queue",     role:"Instructor", label:"Shift Queue"     },
+  { id:"review",    role:"Instructor", label:"AI Draft Review" },
+  { id:"student",   role:"Student",    label:"Log & Submit"    },
+  { id:"feedback",  role:"Student",    label:"My Feedback"     },
 ];
 
 function FISDAQCopilot() {
   const [tab, setTab] = useState("queue");
   const [selectedShift, setSelectedShift] = useState(null);
-  const [key, setKey] = useState(0); // force re-mount for animation
+  const [key, setKey] = useState(0);
 
   const go = (id) => { setTab(id); setKey(k => k+1); };
 
@@ -1006,6 +976,10 @@ function FISDAQCopilot() {
     setSelectedShift(shift);
     go("review");
   };
+
+  const currentUser = tab.startsWith("student") || tab === "student" || tab === "feedback"
+    ? { initials:"PA", name:"Priya Anand", role:"Student · Paramedic Fall '24", color:"#7C3AED" }
+    : { initials:"EM", name:"Dr. Elena Moss", role:"Lead Instructor · Paramedic Program", color:C.teal };
 
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100vh", overflow:"hidden", fontFamily:"var(--ff)" }}>
@@ -1021,12 +995,12 @@ function FISDAQCopilot() {
             padding:"2px 7px", borderRadius:4, letterSpacing:".5px" }}>AI COPILOT</span>
         </div>
         <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ width:30, height:30, borderRadius:"50%", background:C.teal,
+          <div style={{ width:30, height:30, borderRadius:"50%", background:currentUser.color,
             display:"flex", alignItems:"center", justifyContent:"center",
-            fontSize:11, fontWeight:700, color:"#fff" }}>EM</div>
+            fontSize:11, fontWeight:700, color:"#fff" }}>{currentUser.initials}</div>
           <div>
-            <div style={{ fontSize:12, fontWeight:600, color:"#fff" }}>Dr. Elena Moss</div>
-            <div style={{ fontSize:10, color:"rgba(255,255,255,.45)" }}>Lead Instructor · Paramedic Program</div>
+            <div style={{ fontSize:12, fontWeight:600, color:"#fff" }}>{currentUser.name}</div>
+            <div style={{ fontSize:10, color:"rgba(255,255,255,.45)" }}>{currentUser.role}</div>
           </div>
         </div>
       </div>
@@ -1047,7 +1021,7 @@ function FISDAQCopilot() {
             }}
           >
             <span style={{
-              display:"inline-block", background:"rgba(255,255,255,.08)", borderRadius:3,
+              display:"inline-block", borderRadius:3,
               padding:"1px 5px", fontSize:8, fontWeight:700, letterSpacing:".3px",
               textTransform:"uppercase", marginRight:5,
               color: tab===t.id ? C.teal : "rgba(255,255,255,.3)",
@@ -1060,15 +1034,15 @@ function FISDAQCopilot() {
 
       {/* Screen area */}
       <div style={{ flex:1, overflow:"auto" }}>
-        {tab==="queue"     && <QueueScreen     key={key} onOpenShift={handleOpenShift} />}
-        {tab==="review"    && <ReviewScreen    key={key} shift={selectedShift} onBack={() => go("queue")} />}
-        {tab==="student"   && <StudentScreen   key={key} />}
-        {tab==="preceptor" && <PreceptorScreen key={key} />}
-        {tab==="director"  && <DirectorScreen  key={key} />}
+        {tab==="queue"    && <QueueScreen    key={key} onOpenShift={handleOpenShift} />}
+        {tab==="review"   && <ReviewScreen   key={key} shift={selectedShift} onBack={() => go("queue")} />}
+        {tab==="student"  && <StudentScreen  key={key} />}
+        {tab==="feedback" && <MyFeedbackScreen key={key} />}
       </div>
     </div>
   );
 }
+
 export const Route = createFileRoute("/")({
   component: FISDAQCopilot,
 });
