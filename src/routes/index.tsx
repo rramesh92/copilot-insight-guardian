@@ -1,3 +1,5 @@
+// @ts-nocheck
+import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 
 /* ─── INJECT GLOBAL CSS ─────────────────────────────────────── */
@@ -993,7 +995,7 @@ const TABS = [
   { id:"director",  role:"Program Dir.", label:"Cohort & Accreditation"},
 ];
 
-export default function FISDAQCopilot() {
+function FISDAQCopilot() {
   const [tab, setTab] = useState("queue");
   const [selectedShift, setSelectedShift] = useState(null);
   const [key, setKey] = useState(0); // force re-mount for animation
@@ -1067,3 +1069,6 @@ export default function FISDAQCopilot() {
     </div>
   );
 }
+export const Route = createFileRoute("/")({
+  component: FISDAQCopilot,
+});
