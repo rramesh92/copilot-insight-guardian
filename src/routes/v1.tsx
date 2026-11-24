@@ -27,17 +27,19 @@ import {
 export const Route = createFileRoute("/v1")({
   head: () => ({
     meta: [
-      { title: "AI Shift Feedback Copilot — FISDAP" },
+      { title: "Original Instructor Review Workflow v1 — FISDAP" },
       {
         name: "description",
         content:
-          "Instructor-led AI assistance for reviewing EMS student shift logs. Draft feedback faster while preserving human approval.",
+          "The original FISDAP instructor workflow for reviewing EMS student shift logs and approving AI-assisted feedback.",
       },
-      { property: "og:title", content: "AI Shift Feedback Copilot — FISDAP" },
+      { property: "og:title", content: "Original Instructor Review Workflow v1 — FISDAP" },
       {
         property: "og:description",
-        content: "Instructor-led AI assistance for reviewing EMS student shift logs.",
+        content: "The original instructor workflow for reviewing shift logs and approving feedback.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Index,

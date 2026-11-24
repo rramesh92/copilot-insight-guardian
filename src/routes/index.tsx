@@ -1044,5 +1044,23 @@ function FISDAQCopilot() {
 }
 
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Shift Queue and Feedback Workspace — FISDAP AI Copilot" },
+      {
+        name: "description",
+        content:
+          "Review EMS student shift submissions, approve instructor feedback, and track student encounter progress in the FISDAP AI Copilot.",
+      },
+      { property: "og:title", content: "Shift Queue and Feedback Workspace — FISDAP AI Copilot" },
+      {
+        property: "og:description",
+        content:
+          "Review EMS student shift submissions, approve instructor feedback, and track student encounter progress.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: FISDAQCopilot,
 });
